@@ -1,0 +1,116 @@
+# 训练配置文件 - Phase 5 首次完整训练
+
+# 继承默认配置
+base: "default.yaml"
+
+# 数据路径
+data:
+  root: "./raw_data/SVC2004_Task2"
+  feature_cache: "./outputs/features"
+  train_list: "./outputs/features/train_list.txt"
+  val_list: "./outputs/features/val_list.txt"
+  test_list: "./outputs/features/test_list.txt"
+  num_genuine_per_user: 5
+  num_forgery_per_user: 5
+
+# 特征提取
+feature:
+  input_dim: 6
+  output_dim: 23
+  normalize: true
+  remove_duplicates: true
+
+# 数据增强（保守策略）
+augmentation:
+  enabled: true
+  rotation_range: 5  # ±5度
+  scale_range: [0.9, 1.1]
+  noise_std: 0.01
+  probability: 0.5
+
+# 模型架构（Baseline配置）
+model:
+  name: "SiameseStrokeRNN"
+  input_size: 23
+  hidden_size: 128
+  num_layers: 2
+  dropout: 0.3
+  bidirectional: true
+  use_attention: true
+  attention: true
+  rnn_type: "LSTM"  # LSTM or GRU
+  distance_metric: "l2"  # l2, cosine, concat
+
+# 训练配置
+training:
+  num_epochs: 100
+  epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip: 5.0
+
+  # 优化器
+  optimizer: "Adam"
+  beta1: 0.9
+  beta2: 0.999
+  epsilon: 1e-8
+
+  # 学习率调度
+  scheduler: "ReduceLROnPlateau"
+  scheduler_mode: "min"
+  scheduler_patience: 10
+  scheduler_factor: 0.5
+  scheduler_min_lr: 1e-6
+
+  # 早停
+  early_stopping: true
+  early_stopping_patience: 20
+  patience: 20
+  monitor: "val_eer"  # 监控验证集EER
+  mode: "min"
+
+  # 损失函数
+  loss: "WeightedBCE"
+  pos_weight: 1.0  # 根据数据集正负样本比例调整
+
+# 评估配置
+evaluation:
+  metrics: ["accuracy", "eer", "far", "frr"]
+  threshold: 0.5
+  save_predictions: true
+  save_roc_curve: true
+  save_det_curve: true
+
+# 硬件配置
+device:
+  use_cuda: true
+  gpu_id: 0
+  num_workers: 8  # 服务器多核
+  pin_memory: true
+  mixed_precision: false  # 混合精度训练（可选）
+
+# 日志配置
+logging:
+  level: "INFO"
+  log_dir: "./outputs/logs"
+  tensorboard_dir: "./outputs/logs/tensorboard"
+  save_interval: 5
+  print_interval: 10  # 每N个batch打印一次
+
+# 检查点配置
+checkpoint:
+  save_dir: "./outputs/checkpoints"
+  save_best: true
+  save_last: true
+  save_interval: 10
+  resume: null  # 恢复训练的检查点路径
+
+# 随机种子
+seed: 42
+
+# 实验信息
+experiment:
+  name: "baseline_exp001"
+  description: "首次完整训练 - Baseline模型"
+  tags: ["baseline", "phase5"]

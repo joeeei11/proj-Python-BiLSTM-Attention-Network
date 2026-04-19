@@ -1,0 +1,88 @@
+# 默认配置文件
+
+# 数据路径
+data:
+  root: "./raw_data/SVC2004_Task2"
+  feature_cache: "./outputs/features"
+  train_list: "./outputs/features/train_list.txt"
+  val_list: "./outputs/features/val_list.txt"
+  test_list: "./outputs/features/test_list.txt"
+
+# 特征提取
+feature:
+  input_dim: 6  # [id, x, y, t, p, pen_status]
+  output_dim: 23  # 23维时序特征
+  normalize: true
+  remove_duplicates: true
+
+# 数据增强
+augmentation:
+  enabled: true
+  rotation_range: 5  # 度
+  scale_range: [0.9, 1.1]
+  noise_std: 0.01
+  probability: 0.5
+
+# 模型架构
+model:
+  name: "SiameseStrokeRNN"
+  input_size: 23
+  hidden_size: 128
+  num_layers: 2
+  dropout: 0.3
+  bidirectional: true
+  attention: true
+  global_feature: false
+
+# 训练配置
+training:
+  num_epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip: 5.0
+
+  # 优化器
+  optimizer: "Adam"
+  scheduler: "ReduceLROnPlateau"
+  scheduler_patience: 10
+  scheduler_factor: 0.5
+
+  # 早停
+  early_stopping: true
+  patience: 20
+
+  # 损失函数
+  loss: "WeightedBCE"
+  pos_weight: 1.0  # 正样本权重，根据数据集调整
+
+# 评估配置
+evaluation:
+  metrics: ["accuracy", "eer", "far", "frr"]
+  threshold: 0.5  # 默认阈值
+  save_predictions: true
+  save_roc_curve: true
+
+# 硬件配置
+device:
+  use_cuda: true
+  gpu_id: 0
+  num_workers: 4
+  pin_memory: true
+
+# 日志配置
+logging:
+  level: "INFO"
+  log_dir: "./outputs/logs"
+  tensorboard_dir: "./outputs/logs/tensorboard"
+  save_interval: 10  # 每N个epoch保存一次日志
+
+# 检查点配置
+checkpoint:
+  save_dir: "./outputs/checkpoints"
+  save_best: true
+  save_last: true
+  save_interval: 10  # 每N个epoch保存一次
+
+# 随机种子
+seed: 42

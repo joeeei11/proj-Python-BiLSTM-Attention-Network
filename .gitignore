@@ -1,0 +1,58 @@
+# 数据集与模型产物
+raw_data/
+outputs/
+svc2004_data.*
+zzu_project.*
+zzu_complete.*
+config_fixed.zip
+scripts_fixed.zip
+
+# 临时/服务器备份文件
+*.server
+*.remote
+*.bak*
+
+# 服务器运维脚本
+scripts/server_deploy.sh
+scripts/pack_for_server.sh
+scripts/run_experiments.sh
+scripts/monitor_training.sh
+scripts/monitor.py
+scripts/download_results.py
+scripts/validate_models.py
+scripts/COMMANDS.md
+scripts/train.py.remote
+scripts/train.py.server
+
+# 工作文档
+tasks/
+docs/
+CLAUDE.md
+ISSUES.md
+PHASE5_READY.md
+README_PHASE5.md
+任务分析与执行方案.md
+任务说明.md
+
+# 临时脚本
+deploy_to_server.py
+final_setup.py
+redeploy.py
+start_training_now.py
+pack_all.ps1
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 环境
+venv/
+.env
+
+# 编辑器
+.claude/
+.spec-workflow/
+Output/
+Source/
