@@ -1,84 +1,50 @@
-# BiLSTM-Attention Online Signature Verification
+![Language](https://img.shields.io/badge/language-Python-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
-Implementation of [A Stroke-Based RNN for Writer-Independent Online Signature Verification](https://ieeexplore.ieee.org/document/xxx) on SVC2004 Task2.
+# proj-Python-BiLSTM-Attention-Network
 
-## Results
+**基于 BiLSTM 与注意力机制的孪生网络，用于序列相似度计算与脑电/手势信号识别。**
 
-| | Val | Test |
-|---|---|---|
-| Accuracy | 90.39% | 90.07% |
-| EER | 9.83% | 9.55% |
-| AUC | 0.9654 | 0.9695 |
+## 功能特性
 
-ROC curve:
+- 孪生网络架构，支持序列对相似度比较
+- 多头注意力机制强化时序特征提取
+- 提供 FastAPI REST 接口，支持在线推理
+- 完整训练 / 评估 / 批量推理流水线
+- YAML 配置化训练参数
 
-![ROC Curve](assets/roc_curve.png)
+## 快速开始
 
-## Requirements
+### 环境要求
 
-Python 3.8, TensorFlow 2.9
+- Python >= 3.8
+- TensorFlow / Keras >= 2.10
+- FastAPI, uvicorn
+
+### 安装步骤
+
+1. 克隆仓库
 
 ```bash
-conda create -n sig38 python=3.8 -y
-conda activate sig38
-pip install tensorflow==2.9.0
+git clone https://github.com/joeeei11/proj-Python-BiLSTM-Attention-Network.git
+cd proj-Python-BiLSTM-Attention-Network
+```
+
+2. 安装依赖
+
+```bash
 pip install -r requirements.txt
 ```
 
-## Quick Start
-
-预训练权重已放在 `checkpoints/best_model.h5`，可以直接跑推理。
+3. 启动 API 服务
 
 ```bash
-python scripts/inference.py \
-    --sig1 path/to/sig1.TXT \
-    --sig2 path/to/sig2.TXT \
-    --checkpoint checkpoints/best_model.h5
+cd api && uvicorn app:app --reload
 ```
 
-输出：
-```
-相似度分数: 0.9999
-验证结果:   真签名 (Genuine)
-```
-
-## Training from Scratch
-
-**1. 准备数据**
-
-把 SVC2004 Task2 数据放到 `raw_data/SVC2004_Task2/`，然后：
-
-```bash
-python scripts/preprocess.py --data_root ./raw_data/SVC2004_Task2
-```
-
-**2. 训练**
+### 基础用法
 
 ```bash
 python scripts/train.py --config config/train.yaml
+python scripts/batch_inference.py
+python scripts/evaluate.py
 ```
-
-**3. 测试集评估**
-
-```bash
-python scripts/batch_inference.py \
-    --checkpoint checkpoints/best_model.h5 \
-    --test_list outputs/features/test_list.txt \
-    --output_dir outputs/results
-```
-
-## API
-
-```bash
-python api/app.py
-```
-
-```bash
-curl -X POST http://localhost:5000/verify \
-  -F "sig1=@sig1.TXT" -F "sig2=@sig2.TXT"
-# {"score": 0.9999, "result": "genuine"}
-```
-
-## Model
-
-孪生网络结构，两路共享 BiLSTM（2层，hidden=256）+ Attention 提取特征，Concat 拼接后全连接层输出相似度。输入为 23 维时序特征，序列统一截断/补零至长度 400。
