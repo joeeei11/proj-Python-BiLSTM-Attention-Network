@@ -228,9 +228,9 @@ class LearningRateSchedulerCallback(Callback):
         super().__init__()
         self.schedule = schedule
         self.monitor = monitor
-        self.factor = factor
-        self.patience = patience
-        self.min_lr = min_lr
+        self.factor = float(factor)
+        self.patience = int(patience)
+        self.min_lr = float(min_lr)
         self.mode = mode
         self.verbose = verbose
 
