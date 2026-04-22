@@ -136,8 +136,9 @@ def load_model(checkpoint_path: str, config, max_len: int):
     }
     model = SiameseNetwork(
         rnn_config=rnn_config,
-        use_attention=config.model.use_attention,
-        distance_metric=config.model.distance_metric,
+        use_attention=getattr(config.model, 'use_attention',
+                              getattr(config.model, 'attention', True)),
+        distance_metric=getattr(config.model, 'distance_metric', 'l2'),
     )
     dummy = tf.zeros((1, max_len, 23), dtype=tf.float32)
     model((dummy, dummy), training=False)
