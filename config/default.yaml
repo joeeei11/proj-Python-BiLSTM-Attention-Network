@@ -31,8 +31,10 @@ model:
   num_layers: 2
   dropout: 0.3
   bidirectional: true
+  use_attention: true
   attention: true
   global_feature: false
+  distance_metric: "l2"
 
 # 训练配置
 training:

@@ -28,18 +28,18 @@ augmentation:
   noise_std: 0.01
   probability: 0.5
 
-# 模型架构（Baseline配置）
+# 模型架构（Exp01: hidden_size=256 + concat距离）
 model:
   name: "SiameseStrokeRNN"
   input_size: 23
-  hidden_size: 128
+  hidden_size: 256
   num_layers: 2
   dropout: 0.3
   bidirectional: true
   use_attention: true
   attention: true
   rnn_type: "LSTM"  # LSTM or GRU
-  distance_metric: "l2"  # l2, cosine, concat
+  distance_metric: "concat"  # l2, cosine, concat
 
 # 训练配置
 training:
