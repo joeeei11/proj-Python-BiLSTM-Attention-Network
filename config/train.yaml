@@ -28,13 +28,13 @@ augmentation:
   noise_std: 0.01
   probability: 0.5
 
-# 模型架构（Exp01: hidden_size=256 + concat距离）
+# 模型架构（Exp02: hidden_size=128 + concat + dropout=0.5）
 model:
   name: "SiameseStrokeRNN"
   input_size: 23
-  hidden_size: 256
+  hidden_size: 128
   num_layers: 2
-  dropout: 0.3
+  dropout: 0.5
   bidirectional: true
   use_attention: true
   attention: true
@@ -47,8 +47,9 @@ training:
   epochs: 100
   batch_size: 32
   learning_rate: 0.001
-  weight_decay: 0.0001
+  weight_decay: 0.001
   gradient_clip: 5.0
+  pair_ratio: 3.0  # 负正比，训练对从10640增至~21000
 
   # 优化器
   optimizer: "Adam"
@@ -111,6 +112,6 @@ seed: 42
 
 # 实验信息
 experiment:
-  name: "baseline_exp001"
-  description: "首次完整训练 - Baseline模型"
-  tags: ["baseline", "phase5"]
+  name: "exp02_regularize"
+  description: "Exp02: hidden=128, dropout=0.5, pair_ratio=3.0, weight_decay=0.001"
+  tags: ["exp02", "regularization"]
