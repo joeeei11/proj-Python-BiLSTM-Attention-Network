@@ -261,9 +261,9 @@ def create_callbacks(config: dict, args):
         LearningRateSchedulerCallback(
             schedule='reduce_on_plateau',
             monitor='val_loss',
-            factor=0.5,
-            patience=5,
-            min_lr=1e-7,
+            factor=getattr(config.training, 'scheduler_factor', 0.5),
+            patience=getattr(config.training, 'scheduler_patience', 10),
+            min_lr=getattr(config.training, 'scheduler_min_lr', 1e-7),
             verbose=1
         ),
 

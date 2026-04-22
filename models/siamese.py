@@ -69,11 +69,11 @@ class SiameseNetwork(keras.Model):
         else:
             self.similarity_fc = None
 
-        # 输出激活
-        if output_activation == 'sigmoid':
+        # 输出激活：仅 concat 分支（输出为原始 logit）才需要 sigmoid；
+        # l2/cosine 分支已将距离映射到 (0,1]，再过 sigmoid 会把所有输出压到
+        # (0.5, 0.731]，导致 BinaryAccuracy 永远判正类，accuracy 锁死在 0.5。
+        if distance_metric == 'concat' and output_activation == 'sigmoid':
             self.output_layer = layers.Activation('sigmoid')
-        elif output_activation == 'softmax':
-            self.output_layer = layers.Activation('softmax')
         else:
             self.output_layer = None
 
