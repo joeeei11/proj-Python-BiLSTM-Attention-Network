@@ -11,11 +11,11 @@
         Body: multipart/form-data
             sig1: 签名文件1 (.txt)
             sig2: 签名文件2 (.txt)
-            threshold: 阈值（可选，默认0.776）
+            threshold: 判决阈值（必填，从 evaluate_svc2004_protocol.py 的 summary.json 取 eer_threshold）
         Response:
             {
                 "score": 0.9999,
-                "threshold": 0.776,
+                "threshold": <用户传入值>,
                 "result": "genuine",
                 "result_cn": "真签名"
             }
@@ -38,8 +38,7 @@ import tensorflow as tf
 from data.feature_extractor import load_signature_txt, extract_temporal_features
 
 MAX_LEN = 400
-DEFAULT_THRESHOLD = 0.776
-DEFAULT_CHECKPOINT = "outputs/checkpoints/best_model_planB_epoch11.h5"
+DEFAULT_CHECKPOINT = "outputs/checkpoints/best_model.h5"
 
 MODEL_CONFIG = {
     'input_size': 23,
@@ -99,7 +98,9 @@ def verify():
     if 'sig1' not in request.files or 'sig2' not in request.files:
         return jsonify({"error": "需要上传 sig1 和 sig2 两个签名文件"}), 400
 
-    threshold = float(request.form.get('threshold', DEFAULT_THRESHOLD))
+    if 'threshold' not in request.form:
+        return jsonify({"error": "缺少必填参数 threshold（从 evaluate_svc2004_protocol.py 的 summary.json 取 eer_threshold）"}), 400
+    threshold = float(request.form['threshold'])
 
     # 保存临时文件
     tmp_files = []

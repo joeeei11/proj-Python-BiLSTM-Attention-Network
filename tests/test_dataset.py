@@ -70,7 +70,7 @@ class TestDataset:
         assert not np.any(np.isnan(features))
 
     def test_svc2004_dataset(self, temp_dir):
-        """测试SVC2004数据集类"""
+        """测试SVC2004数据集类（split='all' 可直接扫目录，无需 split list）"""
         # 创建多个示例文件
         for i in range(3):
             filepath = Path(temp_dir) / f"U01S0{i+1}.TXT"
@@ -80,9 +80,10 @@ class TestDataset:
 """
             filepath.write_text(content)
 
-        # 创建数据集
+        # split='all' 是唯一允许直接扫目录的模式
         dataset = SVC2004Dataset(
             data_root=temp_dir,
+            split='all',
             feature_cache_dir=None,
             use_cache=False
         )
@@ -97,8 +98,7 @@ class TestDataset:
         assert 'length' in metadata
 
     def test_svc2004_dataset_with_cache(self, temp_dir):
-        """测试带缓存的数据集"""
-        # 创建示例文件
+        """测试带缓存的数据集（split='all' + feature_cache_dir 仅做缓存，不是 split 来源）"""
         filepath = Path(temp_dir) / "U01S01.TXT"
         content = """1 100.0 200.0 0.0 0.5 1
 2 101.0 201.0 10.0 0.6 1
@@ -108,28 +108,69 @@ class TestDataset:
 
         cache_dir = Path(temp_dir) / "cache"
 
-        # 第一次加载（创建缓存）
         dataset1 = SVC2004Dataset(
             data_root=temp_dir,
+            split='all',
             feature_cache_dir=str(cache_dir),
             use_cache=True
         )
         features1, _ = dataset1[0]
 
-        # 检查缓存文件是否创建
         cache_file = cache_dir / "U01S01.pkl"
         assert cache_file.exists()
 
-        # 第二次加载（从缓存）
         dataset2 = SVC2004Dataset(
             data_root=temp_dir,
+            split='all',
             feature_cache_dir=str(cache_dir),
             use_cache=True
         )
         features2, _ = dataset2[0]
 
-        # 检查特征是否一致
         np.testing.assert_array_equal(features1, features2)
+
+    # --- 回归防护：train/val/test 缺 split list 时必须 hard fail --------
+    def test_train_split_without_list_hard_fails(self, temp_dir):
+        """split='train' 且未提供 split list → 必须抛异常，不得 silent fallback"""
+        # 造几个文件仅为 data_root 存在
+        (Path(temp_dir) / "U01S01.TXT").write_text("1 1 1 0 0 1\n")
+        import pytest as _pytest
+        with _pytest.raises((FileNotFoundError, ValueError)):
+            SVC2004Dataset(
+                data_root=temp_dir,
+                split='train',
+                feature_cache_dir=None,   # 未提供 cache dir
+                use_cache=False,
+            )
+
+    def test_val_split_with_missing_list_file_hard_fails(self, temp_dir):
+        """split='val' + feature_cache_dir 下没有 val_list.txt → 必须抛异常"""
+        (Path(temp_dir) / "U01S01.TXT").write_text("1 1 1 0 0 1\n")
+        cache_dir = Path(temp_dir) / "cache"
+        cache_dir.mkdir()
+        import pytest as _pytest
+        with _pytest.raises(FileNotFoundError):
+            SVC2004Dataset(
+                data_root=temp_dir,
+                split='val',
+                feature_cache_dir=str(cache_dir),
+                use_cache=True,
+            )
+
+    def test_explicit_split_list_file_loaded(self, temp_dir):
+        """显式传 split_list_file 时应直接读取"""
+        f1 = Path(temp_dir) / "U01S01.TXT"
+        f1.write_text("1 100 200 0 0.5 1\n2 101 201 10 0.6 1\n")
+        list_file = Path(temp_dir) / "mylist.txt"
+        list_file.write_text(str(f1) + "\n")
+        ds = SVC2004Dataset(
+            data_root=temp_dir,
+            split='train',
+            feature_cache_dir=None,
+            split_list_file=str(list_file),
+            use_cache=False,
+        )
+        assert len(ds) == 1
 
 
 if __name__ == '__main__':

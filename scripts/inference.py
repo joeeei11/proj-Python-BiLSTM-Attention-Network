@@ -5,7 +5,8 @@
     python scripts/inference.py \
         --sig1 path/to/sig1.txt \
         --sig2 path/to/sig2.txt \
-        --checkpoint outputs/checkpoints/best_model_planB_epoch11.h5
+        --checkpoint outputs/checkpoints/best_model.h5 \
+        --threshold 0.XXX   # 从 evaluate_svc2004_protocol.py 生成的 summary.json 中取 EER 阈值
 
 输出: 相似度分数 + 真/假判断
 """
@@ -22,7 +23,6 @@ import tensorflow as tf
 from data.feature_extractor import load_signature_txt, extract_temporal_features
 
 MAX_LEN = 400
-THRESHOLD = 0.776
 
 MODEL_CONFIG = {
     'input_size': 23,
@@ -63,7 +63,7 @@ def build_model() -> tf.keras.Model:
     return model
 
 
-def run_inference(sig1_path: str, sig2_path: str, checkpoint: str, threshold: float = THRESHOLD):
+def run_inference(sig1_path: str, sig2_path: str, checkpoint: str, threshold: float):
     print(f"加载签名1: {sig1_path}")
     feat1 = load_and_extract(sig1_path)
 
@@ -91,10 +91,15 @@ def main():
     parser.add_argument("--sig2", required=True, help="签名2的.txt文件路径")
     parser.add_argument(
         "--checkpoint",
-        default="outputs/checkpoints/best_model_planB_epoch11.h5",
-        help="模型权重路径"
+        default="outputs/checkpoints/best_model.h5",
+        help="模型权重路径（重训后的新模型）"
     )
-    parser.add_argument("--threshold", type=float, default=THRESHOLD, help="判断阈值")
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        required=True,
+        help="判决阈值（从 evaluate_svc2004_protocol.py 生成的 summary.json 中取 EER 阈值）"
+    )
     args = parser.parse_args()
 
     run_inference(args.sig1, args.sig2, args.checkpoint, args.threshold)

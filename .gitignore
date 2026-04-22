@@ -4,8 +4,15 @@ outputs/
 svc2004_data.*
 zzu_project.*
 zzu_complete.*
+zzu_patch.*
 config_fixed.zip
 scripts_fixed.zip
+
+# 截图与附件
+*.jpg
+*.jpeg
+*.png
+*.pdf
 
 # 临时/服务器备份文件
 *.server

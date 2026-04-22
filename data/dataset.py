@@ -119,13 +119,19 @@ class SVC2004Dataset:
         优先级：
         1. 显式传入的 split_list_file
         2. feature_cache_dir/<split>_list.txt
-        3. data_root/*.TXT（仅当 split=='all' 或未提供任何 list 时）
+        3. data_root/*.TXT —— 仅当 split == 'all' 时才允许；
+           对 train/val/test 缺 split list 属致命错误，必须 hard fail 以避免
+           writer 泄漏（详见 tasks/decisions.md TD-012）。
 
         Returns:
             文件路径列表
         """
         # 优先级 1：显式指定的 split list 文件
-        if self.split_list_file is not None and self.split_list_file.exists():
+        if self.split_list_file is not None:
+            if not self.split_list_file.exists():
+                raise FileNotFoundError(
+                    f"Explicit split_list_file not found: {self.split_list_file}"
+                )
             from data.utils import load_file_list
             files = load_file_list(str(self.split_list_file))
             if len(files) == 0:
@@ -133,27 +139,38 @@ class SVC2004Dataset:
             return files
 
         # 优先级 2：feature_cache_dir 下的 <split>_list.txt
-        if self.split != 'all' and self.feature_cache_dir is not None:
+        if self.split != 'all':
+            if self.feature_cache_dir is None:
+                raise ValueError(
+                    f"SVC2004Dataset(split='{self.split}') 需要 split list 才能保证 "
+                    f"writer-independent 划分，但未提供 feature_cache_dir。"
+                    f"请传入 feature_cache_dir=<先跑过 preprocess.py 的目录>，"
+                    f"或显式传入 split_list_file。"
+                )
+
             list_file = self.feature_cache_dir / f"{self.split}_list.txt"
-            if list_file.exists():
-                from data.utils import load_file_list
-                files = load_file_list(str(list_file))
-                if len(files) == 0:
-                    raise ValueError(f"Split list file is empty: {list_file}")
-                return files
-            # 找不到 list 文件时：发出警告（而非报错），允许测试场景直接用目录下所有 .TXT
-            warnings.warn(
-                f"Split list file not found: {list_file}. "
-                f"Falling back to loading all .TXT under {self.data_root}. "
-                f"For real training, run `python scripts/preprocess.py` first."
-            )
+            if not list_file.exists():
+                raise FileNotFoundError(
+                    f"Split list file not found: {list_file}\n"
+                    f"找不到 {self.split} 集的文件列表。请先执行：\n"
+                    f"    python scripts/preprocess.py --data_root {self.data_root} "
+                    f"--output_dir {self.feature_cache_dir} --split_mode official\n"
+                    f"以生成 train_list.txt / val_list.txt / test_list.txt。\n"
+                    f"禁止回退到加载 data_root 下全部 .TXT，否则会破坏 "
+                    f"writer-independent 划分（详见 tasks/decisions.md TD-012）。"
+                )
 
-        # 优先级 3：fallback，加载 data_root 下全部 .TXT
+            from data.utils import load_file_list
+            files = load_file_list(str(list_file))
+            if len(files) == 0:
+                raise ValueError(f"Split list file is empty: {list_file}")
+            return files
+
+        # 优先级 3：仅 split == 'all' 允许加载 data_root 下全部 .TXT
+        # （用于数据探索 / preprocess 本身；训练/评估禁用）
         txt_files = list(self.data_root.glob('*.TXT'))
-
         if len(txt_files) == 0:
             raise ValueError(f"No .TXT files found in {self.data_root}")
-
         return [str(f) for f in txt_files]
 
     def preload_features(self, verbose: bool = True) -> Dict[str, np.ndarray]:

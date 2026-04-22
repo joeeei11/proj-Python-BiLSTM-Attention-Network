@@ -1,11 +1,11 @@
 """
 数据工具函数
 """
-import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
 import json
+
+from data.pair_sampler import group_by_user
 
 
 def split_train_val_test(
@@ -13,41 +13,75 @@ def split_train_val_test(
     train_ratio: float = 0.7,
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
-    seed: int = 42
+    seed: int = 42,
+    train_users: Optional[List[int]] = None,
+    val_users: Optional[List[int]] = None,
+    test_users: Optional[List[int]] = None,
 ) -> Tuple[List[str], List[str], List[str]]:
     """
-    划分训练/验证/测试集
+    Writer-independent 划分：按 user_id 分组，同一 user 的全部文件落入同一 split。
+
+    SVC2004 Task 2 共 40 user，推荐默认划分（28/6/6 = 70%/15%/15%）：
+        train: user 1-28   val: user 29-34   test: user 35-40
+
+    这样可保证训练/验证/测试 user 集合严格不相交，不会出现 writer 泄漏。
 
     Args:
-        file_list: 文件路径列表
-        train_ratio: 训练集比例
-        val_ratio: 验证集比例
-        test_ratio: 测试集比例
-        seed: 随机种子
+        file_list: 文件路径列表（应来自 SVC2004 目录，命名形如 UxSy.TXT）
+        train_ratio, val_ratio, test_ratio: 仅当未指定 *_users 时使用；按 user 数量 round
+        seed: 随机种子（仅当未指定 *_users 且比例需要随机分配多余 user 时使用）
+        train_users/val_users/test_users: 显式指定 user_id 列表（优先级最高）
 
     Returns:
         (train_files, val_files, test_files)
     """
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, "比例之和必须为1"
 
-    np.random.seed(seed)
-    indices = np.random.permutation(len(file_list))
+    user_groups = group_by_user(file_list)
+    all_user_ids = sorted(user_groups.keys())
+    n_users = len(all_user_ids)
 
-    n_train = int(len(file_list) * train_ratio)
-    n_val = int(len(file_list) * val_ratio)
+    # 显式指定 user 划分（优先）
+    if train_users is not None or val_users is not None or test_users is not None:
+        train_u = set(train_users or [])
+        val_u = set(val_users or [])
+        test_u = set(test_users or [])
+        overlap = (train_u & val_u) | (train_u & test_u) | (val_u & test_u)
+        if overlap:
+            raise ValueError(f"train/val/test user 列表有重叠: {sorted(overlap)}")
+    else:
+        # 按比例划分 user_id（固定 seed 下可复现）
+        import random as _random
+        _rng = _random.Random(seed)
+        shuffled = list(all_user_ids)
+        _rng.shuffle(shuffled)
 
-    train_indices = indices[:n_train]
-    val_indices = indices[n_train:n_train + n_val]
-    test_indices = indices[n_train + n_val:]
+        n_train = int(round(n_users * train_ratio))
+        n_val = int(round(n_users * val_ratio))
+        # 剩余全部给 test，保证三者之和等于 n_users
+        n_train = max(1, n_train)
+        n_val = max(1, n_val)
+        if n_train + n_val >= n_users:
+            n_val = max(1, n_users - n_train - 1)
 
-    train_files = [file_list[i] for i in train_indices]
-    val_files = [file_list[i] for i in val_indices]
-    test_files = [file_list[i] for i in test_indices]
+        train_u = set(shuffled[:n_train])
+        val_u = set(shuffled[n_train:n_train + n_val])
+        test_u = set(shuffled[n_train + n_val:])
+
+    def _collect(users: set) -> List[str]:
+        out = []
+        for uid in sorted(users):
+            out.extend(user_groups.get(uid, []))
+        return out
+
+    train_files = _collect(train_u)
+    val_files = _collect(val_u)
+    test_files = _collect(test_u)
 
     return train_files, val_files, test_files
 
 
-def compute_dataset_statistics(features_list: List[np.ndarray]) -> Dict:
+def compute_dataset_statistics(features_list: List) -> Dict:
     """
     计算数据集统计信息
 
@@ -57,6 +91,7 @@ def compute_dataset_statistics(features_list: List[np.ndarray]) -> Dict:
     Returns:
         统计信息字典
     """
+    import numpy as np
     lengths = [len(f) for f in features_list]
     all_features = np.concatenate(features_list, axis=0)
 
@@ -78,7 +113,7 @@ def compute_dataset_statistics(features_list: List[np.ndarray]) -> Dict:
 
 
 def visualize_signature(
-    features: np.ndarray,
+    features,
     save_path: str = None,
     show: bool = True
 ):
@@ -90,6 +125,7 @@ def visualize_signature(
         save_path: 保存路径
         show: 是否显示
     """
+    import matplotlib.pyplot as plt
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
     # 1. 轨迹图
